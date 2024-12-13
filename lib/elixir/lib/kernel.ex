@@ -2740,6 +2740,42 @@ defmodule Kernel do
   end
 
   @doc """
+  Pipes the first argument, `value`, into the third argument, a function `fun`,
+  only if the function in the second argument evualuates to a truthy value
+  and returns the result of calling `fun`.
+
+  In other words, it invokes the function `fun` with `value` as argument,
+  and returns its result only if the second argument function evaluates to true.
+
+  In case the second argument function evaluates to false, it will return the first
+  argument.
+
+  This is most commonly used in pipelines, using the `|>/2` operator, allowing you
+  to pipe a value to a function outside of its first argument only if a condition is met.
+
+  ### Examples
+      iex> params = %{admin: true}
+      %{admin: true}
+      iex> params |> then_if(& &1.admin, & Map.put(&1, :can_edit_users, true))
+      %{admin: true, can_edit_users: true}
+
+      iex> params = %{admin: false}
+      %{admin: false}
+      iex> params |> then_if(fn params -> params.admin end, fn params -> Map.put(params, :can_edit_users, true) end)
+      %{admin: false}
+  """
+  @doc since: "1.19.0"
+  defmacro then_if(value, check, fun) do
+    quote do
+      if unquote(check).(unquote(value)) do
+        unquote(fun).(unquote(value))
+      else
+        unquote(value)
+      end
+    end
+  end
+
+  @doc """
   Gets a value from a nested structure with nil-safe handling.
 
   Uses the `Access` module to traverse the structures
@@ -3049,7 +3085,7 @@ defmodule Kernel do
 
       get_in(struct.foo.bar)
 
-  In case any of the keys returns `nil`, then `nil` will be returned
+  In case any of the keys returns `nil`, only_then `nil` will be returned
   and `get_in/1` won't traverse any further.
 
   Note that in order for this macro to work, the complete path must always
